@@ -1,5 +1,5 @@
 settings:
-  dryrun: false
+  dryrun: true
 eventTriggers:
   - eventSource: github
     input: message
@@ -11,28 +11,28 @@ eventTriggers:
  #    CUSTOMIZE THESE
  ###################################################################33
  #    *** General Build Related ***
+      - build.passthroughDest: '"passthrough-webhook-site"' # event destination to route passthrough messages. comment out to disable
+      - build.pushDest: '"passthrough-webhook-site"' # event destination to route passthrough messages. comment out to disable
+      - build.prDest: '"passthrough-webhook-site"' # event destination to route passthrough messages. comment out to disable
+      - build.tagDest: '"passthrough-webhook-site"' # event destination to route passthrough messages. comment out to disable
       - build.namespace : ' kabanero.namespace ' 
       - build.timeout : ' "1h0m0s" '
       - build.jobid : ' jobID() '
-      - build.nameSuffix: |- # suffix for Kubernetes resource names
-          toDomainName(
-              build.ownerLogin + "-" + build.repositoryName + "-" 
-              + has(build.pr.url)?  "pr" : ( has(build.tag.sha) ? "tag": build.repositoryEvent)
-              + "-" + build.jobid)
+      - build.nameSuffix: toDomainName( build.ownerLogin + "-" + build.repositoryName + "-" + build.event + "-" + build.jobid)
       - build.defaultRegistry : ' "image-registry.openshift-image-registry.svc:5000" '
       - build.serviceAccount : ' "kabanero-operator" '
-#     *** Push ****
-      - if: ' has(build.push.sha)'
+      - if: ' build.event == "push" '
         body:
+          #### Push ####
           - build.push.allowedBranches : ' [ "master" ] '
           - build.push.toRegistry: ' build.defaultRegistry + "/" + build.namespace +  "/" +  build.repositoryName + ":" + build.push.sha'
-#     *** Pull Request ***
-      - if: 'has(build.pr.url)'
+      - if: '  build.event == "pr" '
         body:
+          #### Pull Request ####
           - build.pr.allowedBranches:  ' [ "master" ] '
-#    *** Tag ***
-      - if: 'has(build.tag.version)'
+      - if: ' build.event == "tag" '
         body:
+          #### Tag ####
           - build.tag.pattern : '"\\d\\.\\d\\.\\d"' # only tags that follow this pattern are processed.
           - build.tag.promoteToNamespace : ' build.repositoryName + "-test" '
           - build.tag.fromRegistry : ' build.defaultRegistry+ "/" + build.namespace +  "/" +  build.repositoryName + ":" + build.tag.sha '
@@ -40,13 +40,17 @@ eventTriggers:
  ###################################################################
  #    END CUSTOMIZATION 
  ###################################################################33
-      - if : 'has(build.collectionID) '
-        body:
+      - switch:
+        - if : 'has(build.collectionID) '
           #****************** Appsody Build ************************
           switch:
-            - if: 'has(build.push.branch) && build.push.branch in build.push.allowedBranches'
-              temp.pushResult : 'call("applyResources", "push", build)'
-            - if : 'has(build.pr.branch) && build.pr.branch in build.pr.allowedBranches  && (build.pr.action == "opened" || build.pr.action == "synchronize") '
-              temp.prResult : 'call("applyResources", "pull", build)'
-            - if: 'has(build.tag.sha) '
-              temp.tagResult : 'call("applyResources", "tag", build)'
+            - if: 'build.event == "push"  && build.push.branch in build.push.allowedBranches'
+              temp.sendPush: 'sendEvent(build.pushDest, build, {}) '
+            - if : 'build.event == "pr"  && build.pr.branch in build.pr.allowedBranches  && (build.pr.action == "opened" || build.pr.action == "synchronize") '
+              temp.sendPR: 'sendEvent(build.prDest, build, {}) '
+            - if: ' build.event == "tag" '
+              temp.sendTag: 'sendEvent(build.tagDest, build, {}) '
+        - if : 'has(build.passthroughDest)'
+          body:
+            - temp.send: 'sendEvent(build.passthroughDest, message.body, build.passthroughHeader) '
+            - temp.send1: 'sendEvent("passthrough-tekton", message.body, build.passthroughHeader) '

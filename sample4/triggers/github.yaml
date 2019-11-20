@@ -6,7 +6,9 @@
 # }
 # Output:
 #   {
-#      repositoryEvent: push, pull_request, etc github events
+#      event: push, pr, tag: processed event name
+#      passthroughHeader: filtered github header  that can be used for passthrough
+#      repositoryEvent: push, pull_request, etc : actual github events
 #      appsodyConfig: {
 #          error: error message encountered reading appsody config. 
 #          exists: true if .appsody-config.yaml is found to exist, even if there are errors reading it.
@@ -49,7 +51,9 @@ functions:
     body:
       - if: ' has(message.body) && has(message.header) '  # webhook event
         body:
+          - build.passthroughHeader: ' filter(message.header, "key.startsWith(\"X-Github\") || key == \"X-Hub-Signature\" " )'
           - build.repositoryEvent: ' message.header["X-Github-Event"][0] ' # push, pull_request, tag, etc
+          - build.event: build.repositoryEvent
           - build.appsodyConfig : ' downloadYAML(message, ".appsody-config.yaml") '
           - if: ' has(build.appsodyConfig.content) '
             body:
@@ -61,6 +65,7 @@ functions:
           - switch:
               - if: 'build.repositoryEvent == "pull_request"' 
                 body: 
+                  - build.event: '"pr"'
                   - build.pr.url : ' message.body.pull_request.url '
                   - build.pr.action : ' message.body.action '
                   - build.pr.branch : 'message.body.pull_request.base.ref'
@@ -72,10 +77,12 @@ functions:
                       - if: ' temp.refArray[1] == "heads" '
                         body:  
                           # push
+                          - build.event: '"push"'
                           - build.push.sha : ' message.body.after '
                           - build.push.branch : ' temp.refArray[2] '
                       - if: ' temp.refArray[1] == "tags" '
                         body:
                           # tag
+                          - bulid.event: '"tag"'
                           - build.tag.sha : ' message.body.after '
                           - build.tag.version : ' temp.refArray[2] '
