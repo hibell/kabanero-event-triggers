@@ -1,0 +1,24 @@
+messageProviders:
+- name: nats-provider
+  providerType: nats
+  url: nats://127.0.0.1:4222
+  timeout: 8760h
+# REST provider is a fake message provider that allows users to send events to a HTTPS sink
+# Note that you cannot receive events from a REST provider
+- name: webhook-site-provider
+  providerType: rest
+  url: https://webhook.site/05cd4727-7025-432f-8df8-d5d82669e68c
+- name: tekton-provider
+  providerType: rest
+  url: https://el-getting-started-listener-getting-started.apps.scolded.os.fyre.ibm.com:8080
+  skipTLSVerify: true
+eventDestinations:
+- name: github
+  providerRef: nats-provider
+  topic: github
+- name: passthrough-webhook-site
+  providerRef: webhook-site-provider
+  topic: demo
+- name: passthrough-tekton
+  providerRef: tekton-provider
+  topic: demo
