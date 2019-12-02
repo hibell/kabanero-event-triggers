@@ -83,6 +83,6 @@ functions:
                       - if: ' temp.refArray[1] == "tags" '
                         body:
                           # tag
-                          - bulid.event: '"tag"'
+                          - build.event: '"tag"'
                           - build.tag.sha : ' message.body.after '
                           - build.tag.version : ' temp.refArray[2] '
