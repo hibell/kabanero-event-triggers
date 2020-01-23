@@ -7,13 +7,13 @@ messageProviders:
 # Note that you cannot receive events from a REST provider
 - name: webhook-site-provider
   providerType: rest
-  url: https://webhook.site/20407228-789a-469f-aa1f-da9a8c62398e
+  url: https://webhook.site/c2ab1ec3-ebbc-4633-b467-c7dbc9f482b0
 
 eventDestinations:
 - name: github
   providerRef: nats-provider
   topic: github
-  # You can view requests at https://webhook.site/#!/20407228-789a-469f-aa1f-da9a8c62398e
+  # You can view requests at https://webhook.site/c2ab1ec3-ebbc-4633-b467-c7dbc9f482b0
 - name: passthrough-webhook-site
   providerRef: webhook-site-provider
   topic: demo
